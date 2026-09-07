@@ -14,9 +14,8 @@ Connect the existing Worker under Settings > Builds to `denovochen/nodewarden`:
 - Production branch: `main`
 - Root directory: `/`
 - Build command: `npm run build`
-- Deploy command: `npx wrangler deploy --keep-vars`
+- Deploy command: `npm run deploy`
 - Non-production branch builds: disabled
-- Build environment: Node.js 24
 - Use a dedicated NodeWarden build token, not another application's token.
 
 The integration is only operational after Cloudflare shows the repository
