@@ -1,0 +1,87 @@
+# @author denovochen
+name: Deploy NodeWarden with GitHub Actions
+
+on:
+  workflow_dispatch:
+    inputs:
+      check_updates:
+        description: Only deploy when official main has a new commit
+        type: boolean
+        default: false
+  schedule:
+    - cron: '41 3 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nodewarden-denovochen-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.repository == 'denovochen/nodewarden'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      NODEWARDEN_CHECK_UPDATES: ${{ github.event_name == 'schedule' || inputs.check_updates == true }}
+    steps:
+      - name: Checkout deployment configuration
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+
+      - name: Checkout official NodeWarden main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          repository: shuaiplus/nodewarden
+          ref: main
+          path: app
+          persist-credentials: false
+
+      - name: Set up supported Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: app/.node-version
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Validate target and check upstream commit
+        id: prepare
+        run: node .github/scripts/nodewarden-actions.mjs prepare
+
+      - name: Install locked dependencies
+        if: steps.prepare.outputs.deploy == 'true'
+        working-directory: app
+        run: npm ci
+
+      - name: Check vault, crypto, notifications and configuration compatibility
+        if: steps.prepare.outputs.deploy == 'true'
+        working-directory: app
+        run: |
+          npm run test:config-compatibility
+          npm run test:vault-compatibility
+          npm run test:web-crypto
+          npm run test:notifications-security
+
+      - name: Build web vault
+        if: steps.prepare.outputs.deploy == 'true'
+        working-directory: app
+        run: npm run build
+
+      - name: Deploy to Denovochen Cloudflare account
+        if: steps.prepare.outputs.deploy == 'true'
+        working-directory: app
+        env:
+          NODEWARDEN_SOURCE_SHA: ${{ steps.prepare.outputs.source_sha }}
+        run: >
+          npx --no-install wrangler deploy
+          --config wrangler.deploy.json
+          --keep-vars
+          --message "NodeWarden upstream ${NODEWARDEN_SOURCE_SHA}"
+          --tag "upstream-${NODEWARDEN_SOURCE_SHA:0:12}"
+
+      - name: Verify deployment, bindings and public endpoints
+        run: node .github/scripts/nodewarden-actions.mjs verify
