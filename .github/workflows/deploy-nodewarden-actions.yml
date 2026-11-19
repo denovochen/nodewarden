@@ -9,7 +9,8 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '41 3 * * *'
+    # Daily at 03:00 Beijing time (UTC+8).
+    - cron: '0 19 * * *'
 
 permissions:
   contents: read
