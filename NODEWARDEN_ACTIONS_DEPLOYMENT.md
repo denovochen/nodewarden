@@ -25,7 +25,7 @@ Token 和 JWT 不得写入代码、Actions 日志、Issue 或构建产物。源�
 
 ## 更新与检查
 
-在 Actions → **Deploy NodeWarden with GitHub Actions** → **Run workflow** 选择 `main` 可手动重部署；勾选 `check_updates` 则使用自动更新的检查方式，同提交跳过发布。工作流每天 03:41 UTC（北京时间 11:41）检查官方 `main`，仅新提交触发自动发布。工作流使用官方 `.node-version` 和 `package-lock.json`，执行现有配置、密码库、加密、通知安全测试及前端构建。
+在 Actions → **Deploy NodeWarden with GitHub Actions** → **Run workflow** 选择 `main` 可手动重部署；勾选 `check_updates` 则使用自动更新的检查方式，同提交跳过发布。工作流每天北京时间 03:00（前一天 19:00 UTC，cron 为 `0 19 * * *`）检查官方 `main`，仅新提交触发自动发布。工作流使用官方 `.node-version` 和 `package-lock.json`，执行现有配置、密码库、加密、通知安全测试及前端构建。
 
 每次发布前检查账户、D1、R2 与运行时 Secret，生成带明确数据库 UUID 的实例配置。上游新增绑定、迁移或未知 Wrangler 配置时停止，需审查适配。运行时 Secret 保留；Worker 版本消息记录完整官方提交，作为更新判断依据。相同提交跳过发布时仍检查公开接口。
 
